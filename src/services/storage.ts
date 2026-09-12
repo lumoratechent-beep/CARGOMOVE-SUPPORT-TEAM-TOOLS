@@ -8,7 +8,7 @@ import {
   SubmissionStatus,
   HaulierGuideline,
 } from '../types';
-import { normalizeRegNo } from './companyHelper';
+import { normalizeCompanyType, normalizeRegNo } from './companyHelper';
 
 const STORAGE_KEYS = {
   COMPANIES: 'port_reg_companies_v1',
@@ -26,7 +26,7 @@ export const INITIAL_PORTS: PortConfig[] = [
     location: 'PORT_KLANG',
     display_name: 'WESTPORT',
     code: 'WESTPORT',
-    backend_port_id: 'FEFWEBFWEBFEY4',
+    backend_port_id: '5ad78eeb458efa4c5a1fc007',
     active: true,
     description: 'Port Klang - Westport Terminal Container Gate',
   },
@@ -35,27 +35,63 @@ export const INITIAL_PORTS: PortConfig[] = [
     location: 'PORT_KLANG',
     display_name: 'NORTHPORT',
     code: 'NORTHPORT',
-    backend_port_id: 'WFWEWEGEGR5',
+    backend_port_id: '5adc9dd77753d26fb07d6f26',
     active: true,
     description: 'Port Klang - Northport Gateway',
   },
   {
-    id: 'jh-pg-ics',
-    location: 'JOHOR',
-    display_name: 'PG-ICS',
-    code: 'PG-ICS',
-    backend_port_id: '5cad3ffb4fe26b4cf4ca563c',
+    id: 'kuantan-kp1',
+    location: 'OTHER',
+    display_name: 'KUANTAN PORT CONSORTIUM KP1',
+    code: 'KUANTAN-KP1',
+    backend_port_id: '6035de9b05c73c72066a2317',
     active: true,
-    description: 'Johor Pasir Gudang Inland Clearance Station (ICS)',
+    description: 'Kuantan Port Consortium Sdn Bhd KP1',
   },
   {
-    id: 'jh-pg-depot',
-    location: 'JOHOR',
-    display_name: 'PG-DEPOT',
-    code: 'PG-DEPOT',
-    backend_port_id: '5cad401e4fe26b4cf4ca564d',
+    id: 'kuantan-kp2',
+    location: 'OTHER',
+    display_name: 'KUANTAN PORT CONSORTIUM KP2',
+    code: 'KUANTAN-KP2',
+    backend_port_id: '6282882c55b7d22daf3c250f',
     active: true,
-    description: 'Johor Pasir Gudang Container Depot Terminal',
+    description: 'Kuantan Port Consortium Sdn Bhd KP2',
+  },
+  {
+    id: 'lumut-maritime-terminal',
+    location: 'OTHER',
+    display_name: 'LUMUT MARITIME TERMINAL',
+    code: 'LUMUT-MARITIME',
+    backend_port_id: '6790dd54fbf06143a0210f16',
+    active: true,
+    description: 'Lumut Maritime Terminal Sdn Bhd',
+  },
+  {
+    id: 'penang-port',
+    location: 'OTHER',
+    display_name: 'PENANG PORT',
+    code: 'PENANG-PORT',
+    backend_port_id: '5c3c22be456c0b4014987343',
+    active: true,
+    description: 'Penang Port Sdn Bhd',
+  },
+  {
+    id: 'port-klang-free-zone',
+    location: 'OTHER',
+    display_name: 'PORT KLANG FREE ZONE',
+    code: 'PORT-KLANG-FREE-ZONE',
+    backend_port_id: '5d3c1b79c3b55162a48f463a',
+    active: true,
+    description: 'Port Klang Free Zone Sdn Bhd',
+  },
+  {
+    id: 'johor-port',
+    location: 'JOHOR',
+    display_name: 'JOHOR PORT',
+    code: 'JOHOR-PORT',
+    backend_port_id: '',
+    active: true,
+    description: 'Johor Port terminal mapping',
   },
 ];
 
@@ -76,16 +112,16 @@ export const INITIAL_DEPOTS: DepotConfig[] = [
   },
   {
     id: 'depot-ics-1',
-    port_id: 'jh-pg-ics',
-    display_name: 'PG-ICS Depot A',
-    backend_depot_id: 'DEP-ICS-01A',
+    port_id: 'johor-port',
+    display_name: 'PG-ICS DEPOT SERVICES SDN. BHD.',
+    backend_depot_id: '694e2f62c6b51b68814f6ef7',
     active: true,
   },
   {
     id: 'depot-pgd-1',
-    port_id: 'jh-pg-depot',
-    display_name: 'PG-Depot Staging Bay',
-    backend_depot_id: 'DEP-PGD-BAY',
+    port_id: 'johor-port',
+    display_name: 'PG-INFINITY CONTAINER PARK 1',
+    backend_depot_id: '6965b7b3ce7f708dfcd5cd8b',
     active: true,
   },
 ];
@@ -98,7 +134,7 @@ export const INITIAL_COMPANIES: Company[] = [
     registration_number_new: '201901004521',
     name: 'LUMORA TECH',
     short_name: 'LUMORA',
-    company_type: 'Forwarder',
+    company_type: 'FORWARDER',
     haulier_id: '',
     forwarding_agent_id: '64abc123xyz',
     port_id: 'jh-pg-ics',
@@ -127,7 +163,7 @@ export const INITIAL_COMPANIES: Company[] = [
     registration_number_new: '201801008892',
     name: 'ABC HAULAGE SDN BHD',
     short_name: 'ABC HAULAGE',
-    company_type: 'Haulage',
+    company_type: 'HAULAGE',
     haulier_id: 'xyz456',
     forwarding_agent_id: '',
     port_id: 'jh-pg-ics',
@@ -156,7 +192,7 @@ export const INITIAL_COMPANIES: Company[] = [
     registration_number_new: '202102009183',
     name: 'SOUTHERN FREIGHT FORWARDING SDN BHD',
     short_name: 'SOUTHERN FWD',
-    company_type: 'Forwarding Agent',
+    company_type: 'FORWARDER',
     haulier_id: '',
     forwarding_agent_id: '', // INTENTIONALLY MISSING to demonstrate requirement 12 warning!
     port_id: 'jh-pg-depot',
@@ -185,7 +221,7 @@ export const INITIAL_COMPANIES: Company[] = [
     registration_number_new: '202001099231',
     name: 'KLANG VALLEY CONTAINER HAULIER',
     short_name: 'KV HAULIER',
-    company_type: 'Haulier',
+    company_type: 'HAULAGE',
     haulier_id: '', // INTENTIONALLY MISSING to demonstrate HAULIERID missing warning!
     forwarding_agent_id: '',
     port_id: 'pk-westport',
@@ -217,7 +253,7 @@ export const INITIAL_SUBMISSIONS: RegistrationSubmission[] = [
     company_id: 'comp-1',
     company_reg_no: 'AAAAAA-2',
     company_name: 'LUMORA TECH',
-    company_type: 'Forwarder',
+    company_type: 'FORWARDER',
     port_location: 'JOHOR',
     port_id: 'jh-pg-ics',
     depot_id: 'depot-ics-1',
@@ -241,7 +277,7 @@ export const INITIAL_SUBMISSIONS: RegistrationSubmission[] = [
     company_id: 'comp-1',
     company_reg_no: 'AAAAAA-2',
     company_name: 'LUMORA TECH',
-    company_type: 'Forwarder',
+    company_type: 'FORWARDER',
     port_location: 'JOHOR',
     port_id: 'jh-pg-ics',
     depot_id: 'depot-ics-1',
@@ -280,7 +316,7 @@ export const INITIAL_SUBMISSIONS: RegistrationSubmission[] = [
     company_id: 'comp-2',
     company_reg_no: 'BBBBBB-1',
     company_name: 'ABC HAULAGE SDN BHD',
-    company_type: 'Haulage',
+    company_type: 'HAULAGE',
     port_location: 'JOHOR',
     port_id: 'jh-pg-ics',
     depot_id: 'depot-ics-1',
@@ -322,7 +358,7 @@ export const INITIAL_SUBMISSIONS: RegistrationSubmission[] = [
     company_id: 'comp-3',
     company_reg_no: 'CCCCCC-3',
     company_name: 'SOUTHERN FREIGHT FORWARDING SDN BHD',
-    company_type: 'Forwarding Agent',
+    company_type: 'FORWARDER',
     port_location: 'JOHOR',
     port_id: 'jh-pg-depot',
     depot_id: 'depot-pgd-1',
@@ -359,7 +395,7 @@ export const INITIAL_SUBMISSIONS: RegistrationSubmission[] = [
     company_id: '',
     company_reg_no: 'WP-99218-X',
     company_name: 'NORTHPORT LOGISTICS PARTNERS',
-    company_type: 'Haulage',
+    company_type: 'HAULAGE',
     port_location: 'PORT_KLANG',
     port_id: 'pk-northport',
     depot_id: 'depot-np-1',
@@ -372,7 +408,7 @@ export const INITIAL_SUBMISSIONS: RegistrationSubmission[] = [
       company: {
         name: 'NORTHPORT LOGISTICS PARTNERS',
         short_name: 'NLP',
-        company_type: 'Haulage',
+        company_type: 'HAULAGE',
         registration_number_old: 'WP-99218-X',
         registration_number_new: '202301048123',
         port_id: 'pk-northport',
@@ -423,26 +459,99 @@ export function initStorage(): void {
   if (!initialized) {
     localStorage.setItem(STORAGE_KEYS.PORTS, JSON.stringify(INITIAL_PORTS));
     localStorage.setItem(STORAGE_KEYS.DEPOTS, JSON.stringify(INITIAL_DEPOTS));
-    localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(INITIAL_COMPANIES));
-    localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(INITIAL_SUBMISSIONS));
+    localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(INITIAL_COMPANIES.map((company) => ({
+      ...company,
+      port_id: company.port_id === 'jh-pg-ics' || company.port_id === 'jh-pg-depot' ? 'johor-port' : company.port_id,
+    }))));
+    localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(INITIAL_SUBMISSIONS.map((submission) => ({
+      ...submission,
+      port_id: submission.port_id === 'jh-pg-ics' || submission.port_id === 'jh-pg-depot' ? 'johor-port' : submission.port_id,
+      data: {
+        ...submission.data,
+        company: submission.data.company ? {
+          ...submission.data.company,
+          port_id: submission.data.company.port_id === 'jh-pg-ics' || submission.data.company.port_id === 'jh-pg-depot' ? 'johor-port' : submission.data.company.port_id,
+        } : submission.data.company,
+      },
+    }))));
     localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
   } else {
-    // Migration check: ensure Westport and Northport default IDs match FEFWEBFWEBFEY4 and WFWEWEGEGR5
+    // Keep existing browser data aligned with the current port backend master list.
     try {
       const rawPorts = localStorage.getItem(STORAGE_KEYS.PORTS);
       if (rawPorts) {
         const ports: PortConfig[] = JSON.parse(rawPorts);
         let modified = false;
-        ports.forEach((p) => {
-          if (p.id === 'pk-westport' && p.backend_port_id.startsWith('PK-WP')) {
-            p.backend_port_id = 'FEFWEBFWEBFEY4';
+        INITIAL_PORTS.forEach((defaultPort) => {
+          const existing = ports.find((port) => port.id === defaultPort.id || port.code === defaultPort.code);
+          if (!existing) {
+            ports.push(defaultPort);
             modified = true;
+            return;
           }
-          if (p.id === 'pk-northport' && p.backend_port_id.startsWith('PK-NP')) {
-            p.backend_port_id = 'WFWEWEGEGR5';
+
+          if (defaultPort.id !== 'johor-port' && existing.backend_port_id !== defaultPort.backend_port_id) {
+            existing.backend_port_id = defaultPort.backend_port_id;
             modified = true;
           }
         });
+        const filteredPorts = ports.filter((port) => port.id !== 'jh-pg-ics' && port.id !== 'jh-pg-depot');
+        if (filteredPorts.length !== ports.length) {
+          ports.splice(0, ports.length, ...filteredPorts);
+          modified = true;
+        }
+        if (!ports.some((port) => port.id === 'johor-port')) {
+          ports.push(INITIAL_PORTS.find((port) => port.id === 'johor-port')!);
+          modified = true;
+        }
+        const rawDepots = localStorage.getItem(STORAGE_KEYS.DEPOTS);
+        if (rawDepots) {
+          const depots: DepotConfig[] = JSON.parse(rawDepots);
+          let depotsModified = false;
+          INITIAL_DEPOTS.forEach((defaultDepot) => {
+            const existing = depots.find((depot) => depot.id === defaultDepot.id);
+            if (existing && (existing.display_name !== defaultDepot.display_name || existing.backend_depot_id !== defaultDepot.backend_depot_id)) {
+              existing.display_name = defaultDepot.display_name;
+              existing.backend_depot_id = defaultDepot.backend_depot_id;
+              depotsModified = true;
+            }
+            if (existing && (existing.id === 'depot-ics-1' || existing.id === 'depot-pgd-1') && existing.port_id !== 'johor-port') {
+              existing.port_id = 'johor-port';
+              depotsModified = true;
+            }
+          });
+          if (depotsModified) {
+            localStorage.setItem(STORAGE_KEYS.DEPOTS, JSON.stringify(depots));
+          }
+        }
+        const rawCompanies = localStorage.getItem(STORAGE_KEYS.COMPANIES);
+        if (rawCompanies) {
+          const companies: Company[] = JSON.parse(rawCompanies);
+          const normalizedCompanies = companies.map((company) => company.port_id === 'jh-pg-ics' || company.port_id === 'jh-pg-depot'
+            ? { ...company, port_id: 'johor-port' }
+            : company);
+          if (JSON.stringify(companies) !== JSON.stringify(normalizedCompanies)) {
+            localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(normalizedCompanies));
+          }
+        }
+        const rawSubmissions = localStorage.getItem(STORAGE_KEYS.SUBMISSIONS);
+        if (rawSubmissions) {
+          const submissions: RegistrationSubmission[] = JSON.parse(rawSubmissions);
+          const normalizedSubmissions = submissions.map((submission) => ({
+            ...submission,
+            port_id: submission.port_id === 'jh-pg-ics' || submission.port_id === 'jh-pg-depot' ? 'johor-port' : submission.port_id,
+            data: {
+              ...submission.data,
+              company: submission.data.company ? {
+                ...submission.data.company,
+                port_id: submission.data.company.port_id === 'jh-pg-ics' || submission.data.company.port_id === 'jh-pg-depot' ? 'johor-port' : submission.data.company.port_id,
+              } : submission.data.company,
+            },
+          }));
+          if (JSON.stringify(submissions) !== JSON.stringify(normalizedSubmissions)) {
+            localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(normalizedSubmissions));
+          }
+        }
         if (modified) {
           localStorage.setItem(STORAGE_KEYS.PORTS, JSON.stringify(ports));
         }
@@ -457,8 +566,14 @@ export function initStorage(): void {
 export function resetStorage(): void {
   localStorage.setItem(STORAGE_KEYS.PORTS, JSON.stringify(INITIAL_PORTS));
   localStorage.setItem(STORAGE_KEYS.DEPOTS, JSON.stringify(INITIAL_DEPOTS));
-  localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(INITIAL_COMPANIES));
-  localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(INITIAL_SUBMISSIONS));
+  localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(INITIAL_COMPANIES.map((company) => ({
+    ...company,
+    port_id: company.port_id === 'jh-pg-ics' || company.port_id === 'jh-pg-depot' ? 'johor-port' : company.port_id,
+  }))));
+  localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(INITIAL_SUBMISSIONS.map((submission) => ({
+    ...submission,
+    port_id: submission.port_id === 'jh-pg-ics' || submission.port_id === 'jh-pg-depot' ? 'johor-port' : submission.port_id,
+  }))));
   localStorage.setItem(STORAGE_KEYS.HAULIER_GUIDELINE, JSON.stringify(DEFAULT_HAULIER_GUIDELINE));
   localStorage.setItem(STORAGE_KEYS.INITIALIZED, 'true');
   notifyListeners();
@@ -503,10 +618,20 @@ export function updatePortConfig(
   return ports[index];
 }
 
+export function deletePortConfig(portId: string): boolean {
+  const depots = getDepots();
+  if (depots.some((depot) => depot.port_id === portId)) return false;
+
+  const ports = getPorts().filter((port) => port.id !== portId);
+  localStorage.setItem(STORAGE_KEYS.PORTS, JSON.stringify(ports));
+  notifyListeners();
+  return true;
+}
+
 /**
  * Returns auto-assigned ports and comma-separated backend IDs.
- * For Port Klang: WESTPORT and NORTHPORT backend IDs (e.g. FEFWEBFWEBFEY4,WFWEWEGEGR5)
- * For Johor: PG-ICS and PG-DEPOT backend IDs
+ * For Port Klang: WESTPORT and NORTHPORT backend IDs.
+ * For Johor: the configured JOHOR PORT backend ID, when present
  */
 export function getAutoAssignedPorts(location: PortLocation): {
   location: PortLocation;
@@ -521,7 +646,7 @@ export function getAutoAssignedPorts(location: PortLocation): {
       location: 'PORT_KLANG' as PortLocation,
       display_name: 'WESTPORT',
       code: 'WESTPORT',
-      backend_port_id: 'FEFWEBFWEBFEY4',
+      backend_port_id: '5ad78eeb458efa4c5a1fc007',
       active: true,
     };
     const np = allPorts.find((p) => p.code === 'NORTHPORT' || p.id === 'pk-northport') || {
@@ -529,7 +654,7 @@ export function getAutoAssignedPorts(location: PortLocation): {
       location: 'PORT_KLANG' as PortLocation,
       display_name: 'NORTHPORT',
       code: 'NORTHPORT',
-      backend_port_id: 'WFWEWEGEGR5',
+      backend_port_id: '5adc9dd77753d26fb07d6f26',
       active: true,
     };
     const ids = [wp.backend_port_id, np.backend_port_id].filter(Boolean);
@@ -586,13 +711,28 @@ export function updateDepotConfig(
   return depots[index];
 }
 
+export function deleteDepotConfig(depotId: string): boolean {
+  const depots = getDepots().filter((depot) => depot.id !== depotId);
+  localStorage.setItem(STORAGE_KEYS.DEPOTS, JSON.stringify(depots));
+  notifyListeners();
+  return true;
+}
+
 // ==================== COMPANIES (COMPANY MASTER) ====================
 
 export function getCompanies(): Company[] {
   initStorage();
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.COMPANIES);
-    return raw ? JSON.parse(raw) : INITIAL_COMPANIES;
+    const companies: Company[] = raw ? JSON.parse(raw) : INITIAL_COMPANIES;
+    const normalized = companies.map((company) => ({
+      ...company,
+      company_type: normalizeCompanyType(company.company_type),
+    }));
+    if (raw && JSON.stringify(companies) !== JSON.stringify(normalized)) {
+      localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(normalized));
+    }
+    return normalized;
   } catch {
     return INITIAL_COMPANIES;
   }
@@ -712,18 +852,6 @@ export function updateCompanyId(
   return company;
 }
 
-export function toggleCompanyStatus(companyId: string): Company | null {
-  const companies = getCompanies();
-  const company = companies.find((c) => c.id === companyId);
-  if (!company) return null;
-
-  company.status = company.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-  company.updated_at = new Date().toISOString();
-  localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(companies));
-  notifyListeners();
-  return company;
-}
-
 // ==================== SUBMISSIONS ====================
 
 export function getSubmissions(): RegistrationSubmission[] {
@@ -731,6 +859,12 @@ export function getSubmissions(): RegistrationSubmission[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.SUBMISSIONS);
     const list: RegistrationSubmission[] = raw ? JSON.parse(raw) : INITIAL_SUBMISSIONS;
+    list.forEach((sub) => {
+      sub.company_type = normalizeCompanyType(sub.company_type);
+      if (sub.data?.company) {
+        sub.data.company.company_type = normalizeCompanyType(sub.data.company.company_type);
+      }
+    });
     // Normalize arrays if legacy single objects exist
     list.forEach((sub) => {
       if (sub.data) {

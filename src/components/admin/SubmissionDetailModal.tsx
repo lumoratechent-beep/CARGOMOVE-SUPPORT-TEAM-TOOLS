@@ -14,6 +14,7 @@ import {
   Calendar,
   Building2,
 } from 'lucide-react';
+import { notifyError, notifySuccess, summarizeError } from '../common/notifications';
 
 interface SubmissionDetailModalProps {
   submission: RegistrationSubmission | null;
@@ -30,7 +31,6 @@ export function SubmissionDetailModal({
   onOpenAssignId,
   onStatusChange,
 }: SubmissionDetailModalProps) {
-  const [exportError, setExportError] = useState('');
   const [adminNotes, setAdminNotes] = useState(submission?.admin_notes || '');
 
   if (!isOpen || !submission) return null;
@@ -44,11 +44,11 @@ export function SubmissionDetailModal({
   };
 
   const handleExportSingle = () => {
-    setExportError('');
     const result = exportSubmissionsToExcel([submission]);
     if (!result.success) {
-      setExportError(result.error || 'Export failed.');
+      notifyError(summarizeError(result.error || 'Export failed.'));
     } else {
+      notifySuccess('Submission exported successfully.');
       onStatusChange?.();
     }
   };
@@ -155,17 +155,22 @@ export function SubmissionDetailModal({
                   <span className="text-slate-800">
                     {submission.data.company.block ? `${submission.data.company.block}, ` : ''}
                     {submission.data.company.address1}, {submission.data.company.address2 ? `${submission.data.company.address2}, ` : ''}
-                    {submission.data.company.city}, {submission.data.company.state} {submission.data.company.postcode}
+                    {submission.data.company.city}, {submission.data.company.state} {submission.data.company.postcode}, {submission.data.company.country}
                   </span>
                 </div>
                 <div>
                   <span className="text-slate-500 block">Contact Person</span>
-                  <span className="font-semibold text-slate-900">{submission.data.company.contact_name}</span>
+                  <span className="font-semibold text-slate-900">
+                    {submission.data.company.contact_name}
+                    {submission.data.company.contact_designation ? ` (${submission.data.company.contact_designation})` : ''}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block">Contact Info</span>
+                  <span className="text-slate-500 block">PIC Contact Info</span>
                   <span className="text-slate-800">
                     {submission.data.company.contact_email} / {submission.data.company.contact_mobile}
+                    {submission.data.company.office_phone ? ` / Office: ${submission.data.company.office_phone}` : ''}
+                    {submission.data.company.fax ? ` / Fax: ${submission.data.company.fax}` : ''}
                   </span>
                 </div>
               </div>
@@ -308,12 +313,6 @@ export function SubmissionDetailModal({
               <div className="text-[11px] text-emerald-700 mt-0.5">
                 Exported on {new Date(submission.exported_at || '').toLocaleString()}
               </div>
-            </div>
-          )}
-
-          {exportError && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
-              {exportError}
             </div>
           )}
 

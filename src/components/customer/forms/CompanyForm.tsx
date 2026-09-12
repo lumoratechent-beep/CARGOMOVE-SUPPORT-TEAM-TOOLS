@@ -1,13 +1,43 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { PortLocation, CompanyFormData } from '../../../types';
 import { getAutoAssignedPorts } from '../../../services/storage';
-import { Building2, Phone, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Building2, Phone, Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface CompanyFormProps {
   initialLocation: PortLocation;
   initialPortId?: string;
   onSubmit: (data: CompanyFormData) => void;
   onBack: () => void;
+}
+
+const statesByCountry: Record<string, string[]> = {
+  Malaysia: [
+    'Johor',
+    'Kedah',
+    'Kelantan',
+    'Melaka',
+    'Negeri Sembilan',
+    'Pahang',
+    'Penang',
+    'Perak',
+    'Perlis',
+    'Sabah',
+    'Sarawak',
+    'Selangor',
+    'Terengganu',
+    'Kuala Lumpur',
+    'Labuan',
+    'Putrajaya',
+  ],
+  Singapore: ['Central Region', 'East Region', 'North Region', 'North-East Region', 'West Region'],
+};
+
+function FieldError({ message }: { message?: string }) {
+  return (
+    <p aria-live="polite" className="min-h-[12px] text-[10px] text-rose-600 mt-0.5">
+      {message || ''}
+    </p>
+  );
 }
 
 export function CompanyForm({
@@ -20,7 +50,7 @@ export function CompanyForm({
   const [formData, setFormData] = useState<CompanyFormData>({
     name: '',
     short_name: '',
-    company_type: 'Forwarder',
+    company_type: 'FORWARDER',
     registration_number: '',
     registration_number_old: '',
     registration_number_new: '',
@@ -42,6 +72,9 @@ export function CompanyForm({
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [transitionDirection, setTransitionDirection] = useState<'forward' | 'backward'>('forward');
+  const touchStartX = useRef<number | null>(null);
 
   const handleChange = (field: keyof CompanyFormData, val: string) => {
     setFormData((prev) => {
@@ -61,12 +94,26 @@ export function CompanyForm({
     }
   };
 
+  const handleCountryChange = (country: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      country,
+      state: statesByCountry[country][0],
+    }));
+    setErrors((prev) => {
+      const next = { ...prev };
+      delete next.state;
+      delete next.country;
+      return next;
+    });
+  };
+
   const handleFillDemo = () => {
     const isKlang = initialLocation === 'PORT_KLANG';
     setFormData({
       name: isKlang ? 'MALAYSIAN MARITIME LOGISTICS SDN BHD' : 'SOUTHERN GATEWAY TRANSLOG SDN BHD',
       short_name: isKlang ? 'MML LOGISTICS' : 'SOUTHERN TRANSLOG',
-      company_type: 'Forwarder',
+      company_type: 'FORWARDER',
       registration_number: isKlang ? 'MML-88192-K' : 'SGT-44102-J',
       registration_number_old: isKlang ? 'MML-88192-K' : 'SGT-44102-J',
       registration_number_new: '202401019821',
@@ -108,6 +155,72 @@ export function CompanyForm({
     return Object.keys(errs).length === 0;
   };
 
+  const validatePage = (page: number) => {
+    const pageFields: Record<number, (keyof CompanyFormData)[]> = {
+      1: ['name', 'short_name', 'registration_number_old'],
+      2: ['address1', 'city', 'state', 'postcode'],
+      3: ['contact_name', 'contact_email', 'contact_mobile'],
+    };
+    const allErrors: Record<string, string> = {};
+
+    if (pageFields[page].includes('name') && !formData.name.trim()) allErrors.name = 'Company Name is required.';
+    if (pageFields[page].includes('short_name') && !formData.short_name.trim()) {
+      allErrors.short_name = 'Company Short Name is required.';
+    }
+    if (pageFields[page].includes('registration_number_old') && !formData.registration_number_old?.trim()) {
+      allErrors.registration_number_old = 'Old Registration Number is required.';
+    }
+    if (pageFields[page].includes('address1') && !formData.address1?.trim()) allErrors.address1 = 'Address Line 1 is required.';
+    if (pageFields[page].includes('city') && !formData.city?.trim()) allErrors.city = 'City is required.';
+    if (pageFields[page].includes('state') && !formData.state?.trim()) allErrors.state = 'State is required.';
+    if (pageFields[page].includes('postcode') && !formData.postcode?.trim()) allErrors.postcode = 'Postcode is required.';
+    if (pageFields[page].includes('contact_name') && !formData.contact_name?.trim()) {
+      allErrors.contact_name = 'Contact Person Name is required.';
+    }
+    if (pageFields[page].includes('contact_email') && (!formData.contact_email?.trim() || !formData.contact_email.includes('@'))) {
+      allErrors.contact_email = 'A valid email is required.';
+    }
+    if (pageFields[page].includes('contact_mobile') && !formData.contact_mobile?.trim()) {
+      allErrors.contact_mobile = 'Mobile Number is required.';
+    }
+
+    setErrors(allErrors);
+    return Object.keys(allErrors).length === 0;
+  };
+
+  const handleNext = (event?: React.MouseEvent<HTMLButtonElement>) => {
+    event?.preventDefault();
+    if (validatePage(currentPage)) {
+      setTransitionDirection('forward');
+      setCurrentPage((page) => Math.min(page + 1, 3));
+    }
+  };
+
+  const handleBack = () => {
+    setTransitionDirection('backward');
+    if (currentPage === 1) {
+      onBack();
+    } else {
+      setCurrentPage((page) => page - 1);
+    }
+  };
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLFormElement>) => {
+    touchStartX.current = event.changedTouches[0]?.clientX ?? null;
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent<HTMLFormElement>) => {
+    if (touchStartX.current === null) return;
+    const swipeDistance = event.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (Math.abs(swipeDistance) < 50) return;
+    if (swipeDistance < 0 && currentPage < 3) handleNext();
+    if (swipeDistance > 0 && currentPage > 1) {
+      setTransitionDirection('backward');
+      setCurrentPage((page) => page - 1);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
@@ -116,9 +229,14 @@ export function CompanyForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto space-y-4">
+    <form
+      onSubmit={handleSubmit}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      className="max-w-3xl mx-auto min-h-[calc(100vh-270px)] flex flex-col gap-3 touch-pan-y"
+    >
       {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+      <div className="flex items-center justify-between pb-3">
         <div>
           <h2 className="text-base font-bold text-slate-900 tracking-tight">Company Registration Form</h2>
           <p className="text-slate-500 text-xs mt-0.5">
@@ -136,8 +254,18 @@ export function CompanyForm({
         </button>
       </div>
 
+      <div className="flex items-center justify-center gap-2 text-[10px] font-semibold text-slate-500">
+        {['Company Details', 'Registered Address', 'Person-Incharge Information'].map((label, index) => (
+          <React.Fragment key={label}>
+            <span className={currentPage === index + 1 ? 'text-[#0090e7]' : ''}>{index + 1}. {label}</span>
+            {index < 2 && <span className="text-slate-300">/</span>}
+          </React.Fragment>
+        ))}
+      </div>
+
       {/* Section 1: Corporate Registration Details */}
-      <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-xs space-y-3">
+      <div key={currentPage} className={`flex-1 min-h-[330px] page-slide-${transitionDirection}`}>
+      {currentPage === 1 && <div className="h-full bg-white rounded-lg border border-slate-200 p-4 shadow-xs space-y-3">
         <div className="flex items-center gap-2 text-slate-900 font-bold text-xs uppercase tracking-wider pb-2 border-b border-slate-100">
           <Building2 className="w-4 h-4 text-[#0090e7]" />
           Corporate & Registration Details
@@ -155,7 +283,7 @@ export function CompanyForm({
               placeholder="LUMORA TECH SDN BHD"
               className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs font-medium focus:ring-1 focus:ring-sky-500 focus:outline-none uppercase"
             />
-            {errors.name && <p className="text-[10px] text-rose-600 mt-0.5">{errors.name}</p>}
+            <FieldError message={errors.name} />
           </div>
 
           <div>
@@ -169,7 +297,7 @@ export function CompanyForm({
               placeholder="LUMORA TECH"
               className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none uppercase"
             />
-            {errors.short_name && <p className="text-[10px] text-rose-600 mt-0.5">{errors.short_name}</p>}
+            <FieldError message={errors.short_name} />
           </div>
 
           <div>
@@ -179,15 +307,16 @@ export function CompanyForm({
             {initialLocation === 'PORT_KLANG' ? (
               <div>
                 <select
-                  value={formData.company_type === 'Transporter' ? 'Transporter' : 'Forwarder'}
+                  value={formData.company_type}
                   onChange={(e) => handleChange('company_type', e.target.value)}
                   className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none bg-white font-semibold text-slate-800"
                 >
-                  <option value="Forwarder">Forwarder (Forwarding Agent)</option>
-                  <option value="Transporter">Transporter</option>
+                  <option value="FORWARDER">FORWARDER (Forwarding Agent)</option>
+                  <option value="HAULAGE">HAULAGE (Haulier Carrier)</option>
+                  <option value="TRANSPORT">TRANSPORT (Logistics)</option>
                 </select>
                 <p className="text-[10px] text-sky-700 mt-1 font-medium bg-sky-50 p-1.5 rounded border border-sky-100">
-                  Port Klang Conventional registration allows <strong>Forwarder</strong> or <strong>Transporter</strong> only.
+                  Select the applicable company type for this registration.
                 </p>
               </div>
             ) : (
@@ -196,10 +325,9 @@ export function CompanyForm({
                 onChange={(e) => handleChange('company_type', e.target.value)}
                 className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none bg-white font-medium text-slate-800"
               >
-                <option value="Forwarder">Forwarder (Forwarding Agent)</option>
-                <option value="Haulage">Haulage (Haulier Carrier)</option>
-                <option value="Transporter">Transporter (Logistics)</option>
-                <option value="Forwarding Agent">Forwarding Agent</option>
+                <option value="FORWARDER">FORWARDER (Forwarding Agent)</option>
+                <option value="HAULAGE">HAULAGE (Haulier Carrier)</option>
+                <option value="TRANSPORT">TRANSPORT (Logistics)</option>
               </select>
             )}
           </div>
@@ -215,9 +343,7 @@ export function CompanyForm({
               placeholder="AAAAAA-2"
               className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none uppercase font-mono"
             />
-            {errors.registration_number_old && (
-              <p className="text-[10px] text-rose-600 mt-0.5">{errors.registration_number_old}</p>
-            )}
+            <FieldError message={errors.registration_number_old} />
           </div>
 
           <div>
@@ -233,10 +359,10 @@ export function CompanyForm({
             />
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* Section 2: Registered Business Address */}
-      <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-xs space-y-3">
+      {currentPage === 2 && <div className="h-full bg-white rounded-lg border border-slate-200 p-4 shadow-xs space-y-3">
         <div className="flex items-center gap-2 text-slate-900 font-bold text-xs uppercase tracking-wider pb-2 border-b border-slate-100">
           <Building2 className="w-4 h-4 text-[#0090e7]" />
           Registered Business Address
@@ -267,7 +393,7 @@ export function CompanyForm({
               placeholder="No. 12, Jalan Perindustrian 4"
               className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
             />
-            {errors.address1 && <p className="text-[10px] text-rose-600 mt-0.5">{errors.address1}</p>}
+            <FieldError message={errors.address1} />
           </div>
 
           <div className="sm:col-span-2">
@@ -283,67 +409,73 @@ export function CompanyForm({
             />
           </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-              City <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.city}
-              onChange={(e) => handleChange('city', e.target.value)}
-              placeholder="Pasir Gudang"
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
-            />
-            {errors.city && <p className="text-[10px] text-rose-600 mt-0.5">{errors.city}</p>}
-          </div>
+          <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                Country <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={formData.country}
+                onChange={(e) => handleCountryChange(e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none bg-white text-slate-800"
+              >
+                <option value="Malaysia">Malaysia</option>
+                <option value="Singapore">Singapore</option>
+              </select>
+            </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-              State <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.state}
-              onChange={(e) => handleChange('state', e.target.value)}
-              placeholder="Johor"
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
-            />
-            {errors.state && <p className="text-[10px] text-rose-600 mt-0.5">{errors.state}</p>}
-          </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                State / Region <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={formData.state}
+                onChange={(e) => handleChange('state', e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none bg-white text-slate-800"
+              >
+                {statesByCountry[formData.country]?.map((state) => (
+                  <option key={state} value={state}>{state}</option>
+                ))}
+              </select>
+              <FieldError message={errors.state} />
+            </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-              Postcode <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={formData.postcode}
-              onChange={(e) => handleChange('postcode', e.target.value)}
-              placeholder="81700"
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
-            />
-            {errors.postcode && <p className="text-[10px] text-rose-600 mt-0.5">{errors.postcode}</p>}
-          </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                City <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.city}
+                onChange={(e) => handleChange('city', e.target.value)}
+                placeholder="Pasir Gudang"
+                className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
+              />
+              <FieldError message={errors.city} />
+            </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-              Country
-            </label>
-            <input
-              type="text"
-              value={formData.country}
-              onChange={(e) => handleChange('country', e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none bg-slate-50 text-slate-600"
-            />
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                Postcode <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.postcode}
+                onChange={(e) => handleChange('postcode', e.target.value)}
+                placeholder="81700"
+                className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
+              />
+              <FieldError message={errors.postcode} />
+            </div>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* Section 3: Primary Operational Contact */}
-      <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-xs space-y-3">
+      {currentPage === 3 && <div className="h-full bg-white rounded-lg border border-slate-200 p-4 shadow-xs space-y-3">
         <div className="flex items-center gap-2 text-slate-900 font-bold text-xs uppercase tracking-wider pb-2 border-b border-slate-100">
           <Phone className="w-4 h-4 text-[#0090e7]" />
-          Primary Operational Contact
+          Person-Incharge Information
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -358,7 +490,7 @@ export function CompanyForm({
               placeholder="Kevin Tan"
               className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
             />
-            {errors.contact_name && <p className="text-[10px] text-rose-600 mt-0.5">{errors.contact_name}</p>}
+            <FieldError message={errors.contact_name} />
           </div>
 
           <div>
@@ -385,7 +517,7 @@ export function CompanyForm({
               placeholder="kevin@company.com"
               className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
             />
-            {errors.contact_email && <p className="text-[10px] text-rose-600 mt-0.5">{errors.contact_email}</p>}
+            <FieldError message={errors.contact_email} />
           </div>
 
           <div>
@@ -399,9 +531,7 @@ export function CompanyForm({
               placeholder="+60123456789"
               className="w-full px-2.5 py-1.5 rounded border border-slate-300 text-xs focus:ring-1 focus:ring-sky-500 focus:outline-none"
             />
-            {errors.contact_mobile && (
-              <p className="text-[10px] text-rose-600 mt-0.5">{errors.contact_mobile}</p>
-            )}
+            <FieldError message={errors.contact_mobile} />
           </div>
 
           <div>
@@ -430,25 +560,39 @@ export function CompanyForm({
             />
           </div>
         </div>
+      </div>}
       </div>
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-between pt-2">
+      <div className="h-9 shrink-0 flex items-center justify-between">
         <button
           type="button"
-          onClick={onBack}
-          className="px-3.5 py-1.5 rounded text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+          onClick={handleBack}
+          className="inline-flex h-9 items-center gap-1.5 px-3.5 py-0 rounded text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
         >
-          &larr; Back
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back
         </button>
 
-        <button
-          type="submit"
-          className="px-5 py-2 rounded text-xs font-bold text-white bg-[#ea7a24] hover:bg-[#d96c1a] transition-colors shadow-xs flex items-center gap-1.5"
-        >
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          Review Registration &rarr;
-        </button>
+        {currentPage < 3 ? (
+          <button
+            type="button"
+            onClick={(event) => handleNext(event)}
+            className="inline-flex h-9 items-center gap-1.5 px-5 py-0 rounded text-xs font-bold text-white bg-[#0095e8] hover:bg-[#0078c8] transition-colors shadow-xs"
+          >
+            Next
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            className="inline-flex h-9 items-center gap-1.5 px-5 py-0 rounded text-xs font-bold text-white bg-[#ea7a24] hover:bg-[#d96c1a] transition-colors shadow-xs"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Review Registration
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
     </form>
   );

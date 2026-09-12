@@ -1,23 +1,28 @@
 import { Company, CompanyCategory, ExternalIdResolution } from '../types';
 
+export type CompanyType = 'HAULAGE' | 'FORWARDER' | 'TRANSPORT';
+
+/** Normalize legacy and user-entered values to the three supported company types. */
+export function normalizeCompanyType(typeStr: string = ''): CompanyType {
+  const normalized = typeStr.trim().toUpperCase();
+
+  if (normalized.includes('HAUL')) return 'HAULAGE';
+  if (normalized.includes('TRANSPORT')) return 'TRANSPORT';
+  return 'FORWARDER';
+}
+
+/** Backend Excel TYPE/COMPANYTYPE value: only HAULAGE is exported distinctly. */
+export function getExportCompanyType(typeStr: string = ''): 'HAULAGE' | 'FORWARDER' {
+  return normalizeCompanyType(typeStr) === 'HAULAGE' ? 'HAULAGE' : 'FORWARDER';
+}
+
 /**
  * Normalizes user-entered or legacy company types into standardized categories:
  * - HAULIER: Haulage, Haulier, Trucking
  * - FORWARDING: Transporter, Forwarder, Forwarding, Forwarding Agent, Freight
  */
 export function normalizeCompanyCategory(typeStr: string = ''): CompanyCategory {
-  const normalized = typeStr.trim().toLowerCase();
-
-  if (
-    normalized.includes('haul') ||
-    normalized === 'haulier' ||
-    normalized === 'haulage'
-  ) {
-    return 'HAULIER';
-  }
-
-  // Forwarder / Transporter / Forwarding Agent / Freight
-  return 'FORWARDING';
+  return normalizeCompanyType(typeStr) === 'HAULAGE' ? 'HAULIER' : 'FORWARDING';
 }
 
 /**

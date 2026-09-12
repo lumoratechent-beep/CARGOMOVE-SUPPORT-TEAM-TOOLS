@@ -21,6 +21,7 @@ import {
   Trash2,
   Key,
 } from 'lucide-react';
+import { notifyError, notifySuccess, notifyWarning, summarizeError } from '../common/notifications';
 
 export function SubmissionsList() {
   const [submissions, setSubmissions] = useState<RegistrationSubmission[]>(getSubmissions());
@@ -34,9 +35,6 @@ export function SubmissionsList() {
   // Modals
   const [activeSubmission, setActiveSubmission] = useState<RegistrationSubmission | null>(null);
   const [assignIdCompany, setAssignIdCompany] = useState<Company | null>(null);
-
-  // Feedback banner
-  const [exportMessage, setExportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const refreshList = () => {
     setSubmissions(getSubmissions());
@@ -79,21 +77,18 @@ export function SubmissionsList() {
   });
 
   const handleBulkExport = () => {
-    setExportMessage(null);
     const selectedSubs = submissions.filter((s) => selectedIds.includes(s.id));
     if (selectedSubs.length === 0) {
-      setExportMessage({ type: 'error', text: 'Please select at least one submission to export.' });
+      const message = 'Please select at least one submission to export.';
+      notifyWarning(message);
       return;
     }
 
     const res = exportSubmissionsToExcel(selectedSubs);
     if (!res.success) {
-      setExportMessage({ type: 'error', text: res.error || 'Export failed.' });
+      notifyError(summarizeError(res.error || 'Export failed.'));
     } else {
-      setExportMessage({
-        type: 'success',
-        text: `Successfully exported ${res.count} record(s) to ${res.filename}`,
-      });
+      notifySuccess(`Export complete: ${res.count} record(s) generated.`);
       refreshList();
       setSelectedIds([]);
     }
@@ -131,31 +126,6 @@ export function SubmissionsList() {
           </button>
         </div>
       </div>
-
-      {exportMessage && (
-        <div
-          className={`p-3.5 rounded-xl text-xs flex items-center justify-between ${
-            exportMessage.type === 'success'
-              ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
-              : 'bg-rose-50 border border-rose-200 text-rose-800'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            {exportMessage.type === 'success' ? (
-              <CheckCircle className="w-4 h-4 text-emerald-600" />
-            ) : (
-              <AlertTriangle className="w-4 h-4 text-rose-600" />
-            )}
-            <span>{exportMessage.text}</span>
-          </div>
-          <button
-            onClick={() => setExportMessage(null)}
-            className="text-xs underline font-semibold ml-4"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
 
       {/* Filters & Search */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center gap-3">
@@ -316,9 +286,9 @@ export function SubmissionsList() {
                         <PortBadge location={sub.port_location} />
                         <div
                           className="font-mono text-[10px] text-slate-600 mt-1 truncate max-w-[130px] font-semibold"
-                          title={sub.port_location === 'PORT_KLANG' ? 'WESTPORT & NORTHPORT (FEFWEBFWEBFEY4,WFWEWEGEGR5)' : sub.port_id}
+                          title={sub.port_location === 'PORT_KLANG' ? 'WESTPORT & NORTHPORT (5ad78eeb458efa4c5a1fc007,5adc9dd77753d26fb07d6f26)' : sub.port_id}
                         >
-                          {sub.port_location === 'PORT_KLANG' ? 'FEFWEBFWEBFEY4,WFWEWEGEGR5' : (sub.port_id || 'PG-ICS')}
+                          {sub.port_location === 'PORT_KLANG' ? '5ad78eeb458efa4c5a1fc007,5adc9dd77753d26fb07d6f26' : (sub.port_id || 'JOHOR PORT')}
                         </div>
                       </td>
 

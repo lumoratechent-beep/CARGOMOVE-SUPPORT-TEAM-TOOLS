@@ -155,7 +155,7 @@ export function CompanyLookup({
           <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-slate-100 text-xs">
             <div>
               <span className="text-[10px] text-slate-400 block font-semibold">Registered Port Corridor</span>
-              <span className="font-medium text-slate-800">Johor (PG-ICS / PG-DEPOT)</span>
+              <span className="font-medium text-slate-800">Johor Port</span>
             </div>
             <div>
               <span className="text-[10px] text-slate-400 block font-semibold">Pre-Configured Backend ID</span>

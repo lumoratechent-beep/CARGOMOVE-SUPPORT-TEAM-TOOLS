@@ -1,29 +1,26 @@
 import React, { useState } from 'react';
-import { Company, PortConfig } from '../../types';
+import { Company } from '../../types';
 import {
   getCompanies,
   saveCompany,
-  toggleCompanyStatus,
   checkDuplicateRegNo,
   getPorts,
+  getDepots,
 } from '../../services/storage';
-import { getCompanyExternalId, normalizeRegNo } from '../../services/companyHelper';
-import { StatusBadge } from '../common/Badge';
+import { getCompanyExternalId, normalizeCompanyType, normalizeRegNo } from '../../services/companyHelper';
 import { AssignIdModal } from './AssignIdModal';
 import {
   Search,
   Plus,
   Key,
   Filter,
-  CheckCircle,
-  AlertTriangle,
-  Building2,
   Edit2,
-  Power,
   X,
-  Sparkles,
   MoreVertical,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
+import { notifySuccess, notifyWarning } from '../common/notifications';
 
 export function CompanyMaster() {
   const [companies, setCompanies] = useState<Company[]>(getCompanies());
@@ -44,11 +41,6 @@ export function CompanyMaster() {
     setCompanies(getCompanies());
   };
 
-  const handleToggleStatus = (id: string) => {
-    toggleCompanyStatus(id);
-    refreshList();
-  };
-
   const filteredCompanies = companies.filter((comp) => {
     // Search query
     const term = searchTerm.toLowerCase();
@@ -61,7 +53,7 @@ export function CompanyMaster() {
       comp.registration_number_new?.toLowerCase().includes(term);
 
     // Type filter
-    const matchesType = typeFilter === 'ALL' || comp.company_type.toLowerCase() === typeFilter.toLowerCase();
+    const matchesType = typeFilter === 'ALL' || normalizeCompanyType(comp.company_type) === typeFilter;
 
     // Port filter
     const matchesPort = portFilter === 'ALL' || comp.port_id === portFilter;
@@ -117,10 +109,9 @@ export function CompanyMaster() {
             className="px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-blue-500"
           >
             <option value="ALL">All Types</option>
-            <option value="Forwarder">Forwarder</option>
-            <option value="Haulage">Haulage</option>
-            <option value="Transporter">Transporter</option>
-            <option value="Forwarding Agent">Forwarding Agent</option>
+            <option value="FORWARDER">FORWARDER</option>
+            <option value="HAULAGE">HAULAGE</option>
+            <option value="TRANSPORT">TRANSPORT</option>
           </select>
 
           {/* Port Filter */}
@@ -158,12 +149,10 @@ export function CompanyMaster() {
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
-                <th className="py-3 px-4">Registration No</th>
                 <th className="py-3 px-4">Company Name</th>
-                <th className="py-3 px-3">Type</th>
+                <th className="py-3 px-3 text-center">Type</th>
                 <th className="py-3 px-4">Assigned ID</th>
-                <th className="py-3 px-3">Facility</th>
-                <th className="py-3 px-3">Status</th>
+                <th className="py-3 px-3 text-center">Port</th>
                 <th className="py-3 px-3">Last Updated</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
@@ -171,7 +160,7 @@ export function CompanyMaster() {
             <tbody className="divide-y divide-slate-100">
               {filteredCompanies.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-500">
+                  <td colSpan={6} className="py-8 text-center text-slate-500">
                     No company master records matching current filters.
                   </td>
                 </tr>
@@ -179,105 +168,71 @@ export function CompanyMaster() {
                 filteredCompanies.map((comp) => {
                   const idInfo = getCompanyExternalId(comp);
                   const isMissing = !idInfo.has_required_id;
-                  const isHaulier = comp.company_type.toLowerCase() === 'haulage' || comp.company_type.toLowerCase() === 'transporter' || idInfo.category === 'HAULIER';
-                  const isForwarder = comp.company_type.toLowerCase() === 'forwarder' || idInfo.category === 'FORWARDING';
+                  const isHaulier = idInfo.category === 'HAULIER';
+                  const isForwarder = idInfo.category === 'FORWARDING';
 
                   return (
                     <tr
                       key={comp.id}
-                      className={`hover:bg-slate-50/70 transition-colors ${
-                        isMissing ? 'bg-amber-50/30' : ''
-                      }`}
+                      className="hover:bg-slate-50/70 transition-colors"
                     >
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">
-                        {comp.registration_number}
-                        {comp.registration_number_new && (
-                          <span className="block text-[10px] text-slate-400 font-normal">
-                            SSM: {comp.registration_number_new}
-                          </span>
-                        )}
-                      </td>
-
                       <td className="py-3 px-4">
                         <div className="font-bold text-slate-900">{comp.name}</div>
-                        <div className="text-[11px] text-slate-500">{comp.short_name}</div>
+                        <div className="text-[11px] text-slate-500 font-mono">{comp.registration_number}</div>
                       </td>
 
-                      <td className="py-3 px-3">
-                        <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
-                          {comp.company_type}
-                        </span>
+                      <td className="py-3 px-3 text-center text-slate-700">
+                        {comp.company_type}
                       </td>
 
-                      {/* Merged Assigned ID Column: IF HAULIER GREEN, IF FORWARDER = BLUE */}
-                      <td className="py-3 px-4 font-mono">
+                      <td className="py-3 px-4 font-mono text-slate-700">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          {/* Haulier ID (GREEN) */}
                           {(isHaulier || comp.haulier_id) && (
                             comp.haulier_id ? (
-                              <span
-                                className="inline-flex items-center gap-1 font-bold text-[11px] text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-300"
-                                title="Haulier ID"
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                <span>{comp.haulier_id}</span>
-                              </span>
+                              <span title="Haulier ID">{comp.haulier_id}</span>
                             ) : (
                               <button
                                 type="button"
                                 onClick={() => setSelectedCompanyForId(comp)}
-                                className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300"
+                                className="text-[11px] text-slate-600 underline hover:text-blue-700"
                                 title="Assign Haulier ID"
                               >
-                                <AlertTriangle className="w-3 h-3 mr-1 text-amber-700" />
                                 Haulier ID Required
                               </button>
                             )
                           )}
 
-                          {/* Forwarder ID (BLUE) */}
                           {(isForwarder || comp.forwarding_agent_id) && (
                             comp.forwarding_agent_id ? (
-                              <span
-                                className="inline-flex items-center gap-1 font-bold text-[11px] text-blue-800 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-300"
-                                title="Forwarding Agent ID"
-                              >
-                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                <span>{comp.forwarding_agent_id}</span>
-                              </span>
+                              <span title="Forwarding Agent ID">{comp.forwarding_agent_id}</span>
                             ) : (
                               <button
                                 type="button"
                                 onClick={() => setSelectedCompanyForId(comp)}
-                                className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300"
+                                className="text-[11px] text-slate-600 underline hover:text-blue-700"
                                 title="Assign Forwarder ID"
                               >
-                                <AlertTriangle className="w-3 h-3 mr-1 text-amber-700" />
                                 Forwarder ID Required
                               </button>
                             )
                           )}
 
-                          {/* Fallback if neither */}
                           {!comp.haulier_id && !comp.forwarding_agent_id && !isHaulier && !isForwarder && (
                             <button
                               type="button"
                               onClick={() => setSelectedCompanyForId(comp)}
-                              className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300"
+                              className="text-[11px] text-slate-600 underline hover:text-blue-700"
                             >
-                              <AlertTriangle className="w-3 h-3 mr-1 text-amber-700" />
                               ID Required
                             </button>
                           )}
                         </div>
                       </td>
 
-                      <td className="py-3 px-3 text-[11px] text-slate-600">
-                        {ports.find((p) => p.id === comp.port_id)?.display_name || 'General'}
-                      </td>
-
-                      <td className="py-3 px-3">
-                        <StatusBadge status={comp.status} />
+                      <td className="py-3 px-3 text-center text-[11px] text-slate-600">
+                        {ports.find((p) => p.id === comp.port_id)?.location === 'JOHOR'
+                          ? 'JOHOR DEPOT'
+                          : 'PORT KLANG'}
                       </td>
 
                       <td className="py-3 px-3 text-[11px] text-slate-400">
@@ -336,23 +291,6 @@ export function CompanyMaster() {
                                   Edit Company Details
                                 </button>
 
-                                <div className="border-t border-slate-100 my-1"></div>
-
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveActionMenuId(null);
-                                    handleToggleStatus(comp.id);
-                                  }}
-                                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold transition-colors ${
-                                    comp.status === 'ACTIVE'
-                                      ? 'text-rose-600 hover:bg-rose-50'
-                                      : 'text-emerald-600 hover:bg-emerald-50'
-                                  }`}
-                                >
-                                  <Power className="w-3.5 h-3.5" />
-                                  {comp.status === 'ACTIVE' ? 'Deactivate Company' : 'Activate Company'}
-                                </button>
                               </div>
                             </>
                           )}
@@ -400,37 +338,61 @@ function CompanyEditModal({
   onSuccess: () => void;
 }) {
   const ports = getPorts();
+  const depots = getDepots();
 
-  const [form, setForm] = useState({
+  const [activeSection, setActiveSection] = useState(0);
+  const [form, setForm] = useState<CompanyFormState>({
+    id: company?.id || '',
     name: company?.name || '',
     short_name: company?.short_name || '',
-    company_type: company?.company_type || 'Forwarder',
+    company_type: normalizeCompanyType(company?.company_type),
     registration_number: company?.registration_number || '',
+    registration_number_old: company?.registration_number_old || '',
     registration_number_new: company?.registration_number_new || '',
     haulier_id: company?.haulier_id || '',
     forwarding_agent_id: company?.forwarding_agent_id || '',
     port_id: company?.port_id || ports[0]?.id || '',
-    city: company?.city || 'Pasir Gudang',
-    state: company?.state || 'Johor',
+    depot_id: company?.depot_id || '',
+    block: company?.block || '',
+    address1: company?.address1 || '',
+    address2: company?.address2 || '',
+    city: company?.city || '',
+    state: company?.state || '',
+    postcode: company?.postcode || '',
+    country: company?.country || 'Malaysia',
     contact_name: company?.contact_name || '',
     contact_email: company?.contact_email || '',
+    contact_designation: company?.contact_designation || '',
     contact_mobile: company?.contact_mobile || '',
+    office_phone: company?.office_phone || '',
+    fax: company?.fax || '',
+    status: company?.status || 'ACTIVE',
   });
 
-  const [error, setError] = useState('');
+  const sections = [
+    { title: 'Identity & Registration', description: 'Company identity and statutory registration details.' },
+    { title: 'Operations & IDs', description: 'Port routing, account identifiers, and master status.' },
+    { title: 'Address & Contact', description: 'Registered address and primary contact details.' },
+  ];
+
+  const setField = <K extends keyof CompanyFormState>(field: K, value: CompanyFormState[K]) => {
+    setForm((current) => ({ ...current, [field]: value }));
+  };
 
   const isEditing = !!company;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.registration_number.trim()) {
-      setError('Company Name and Registration Number are required.');
+      const message = 'Company Name and Registration Number are required.';
+      notifyWarning(message);
       return;
     }
 
     // Duplicate check if new or changed
     if (checkDuplicateRegNo(form.registration_number, company?.id)) {
-      setError(`A company with registration number "${form.registration_number}" already exists in Master!`);
+      const message = `A company with registration number "${form.registration_number}" already exists in Master!`;
+      notifyWarning(message);
       return;
     }
 
@@ -440,18 +402,29 @@ function CompanyEditModal({
       short_name: form.short_name.trim().toUpperCase(),
       company_type: form.company_type,
       registration_number: form.registration_number.trim().toUpperCase(),
-      registration_number_old: form.registration_number.trim().toUpperCase(),
-      registration_number_new: form.registration_number_new.trim(),
-      haulier_id: form.haulier_id.trim(),
-      forwarding_agent_id: form.forwarding_agent_id.trim(),
+      registration_number_old: form.registration_number_old.trim().toUpperCase(),
+      registration_number_new: form.registration_number_new.trim().toUpperCase(),
+      haulier_id: form.haulier_id.trim().toUpperCase(),
+      forwarding_agent_id: form.forwarding_agent_id.trim().toUpperCase(),
       port_id: form.port_id,
-      city: form.city,
-      state: form.state,
-      contact_name: form.contact_name,
-      contact_email: form.contact_email,
-      contact_mobile: form.contact_mobile,
+      depot_id: form.depot_id,
+      block: form.block.trim(),
+      address1: form.address1.trim(),
+      address2: form.address2.trim(),
+      city: form.city.trim(),
+      state: form.state.trim(),
+      postcode: form.postcode.trim(),
+      country: form.country.trim(),
+      contact_name: form.contact_name.trim(),
+      contact_email: form.contact_email.trim(),
+      contact_designation: form.contact_designation.trim(),
+      contact_mobile: form.contact_mobile.trim(),
+      office_phone: form.office_phone.trim(),
+      fax: form.fax.trim(),
+      status: form.status,
     });
 
+    notifySuccess(isEditing ? 'Company updated successfully.' : 'Company added successfully.');
     onSuccess();
   };
 
@@ -467,13 +440,90 @@ function CompanyEditModal({
           </button>
         </div>
 
-        {error && (
-          <div className="mt-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-lg">
-            {error}
-          </div>
-        )}
+        <div className="mt-4 flex items-center gap-2" role="tablist" aria-label="Company details sections">
+          {sections.map((section, index) => (
+            <button
+              key={section.title}
+              type="button"
+              role="tab"
+              aria-selected={activeSection === index}
+              onClick={() => setActiveSection(index)}
+              className={`flex-1 border-b-2 px-2 pb-2 text-left transition-colors ${
+                activeSection === index ? 'border-blue-600 text-blue-700' : 'border-slate-200 text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <span className="block text-[10px] font-bold uppercase tracking-wider">Section {index + 1}</span>
+              <span className="block text-xs font-semibold truncate">{section.title}</span>
+            </button>
+          ))}
+        </div>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="mt-5 space-y-4 text-xs">
+          <p className="text-[11px] text-slate-500">{sections[activeSection].description}</p>
+          <div className="min-h-[280px]">
+            {activeSection === 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Company Legal Name *" value={form.name} onChange={(value) => setField('name', value)} className="sm:col-span-2" placeholder="LUMORA TECH SDN BHD" />
+                <Field label="Short Name" value={form.short_name} onChange={(value) => setField('short_name', value)} placeholder="LUMORA" />
+                <SelectField label="Company Category *" value={form.company_type} onChange={(value) => setField('company_type', value)} options={['FORWARDER', 'HAULAGE', 'TRANSPORT']} />
+                <Field label="Registration No (Primary) *" value={form.registration_number} onChange={(value) => setField('registration_number', value)} className="font-mono" placeholder="AAAAAA-2" />
+                <Field label="Old Registration No" value={form.registration_number_old || ''} onChange={(value) => setField('registration_number_old', value)} className="font-mono" placeholder="AAAAAA-2" />
+                <Field label="SSM New 12-Digit Reg No" value={form.registration_number_new || ''} onChange={(value) => setField('registration_number_new', value)} className="font-mono" placeholder="201901004521" />
+              </div>
+            )}
+
+            {activeSection === 1 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="HAULIERID" value={form.haulier_id || ''} onChange={(value) => setField('haulier_id', value)} className="font-mono" placeholder="xyz456" />
+                <Field label="FORWARDING_AGENT_ID" value={form.forwarding_agent_id || ''} onChange={(value) => setField('forwarding_agent_id', value)} className="font-mono" placeholder="64abc123xyz" />
+                <SelectField label="Primary Port" value={form.port_id || ''} onChange={(value) => { setField('port_id', value); setField('depot_id', ''); }} options={ports.map((port) => ({ value: port.id, label: `${port.display_name} (${port.location})` }))} />
+                <SelectField label="Primary Depot" value={form.depot_id || ''} onChange={(value) => setField('depot_id', value)} options={[{ value: '', label: 'No depot assigned' }, ...depots.filter((depot) => !form.port_id || depot.port_id === form.port_id).map((depot) => ({ value: depot.id, label: depot.display_name }))]} />
+                <SelectField label="Master Status" value={form.status} onChange={(value) => setField('status', value as Company['status'])} options={['ACTIVE', 'INACTIVE']} />
+                <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-[11px] text-blue-800 sm:col-span-2">
+                  The active external ID is determined by company category. Keep the other ID populated only when this company needs both mappings.
+                </div>
+              </div>
+            )}
+
+            {activeSection === 2 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Block / Building" value={form.block || ''} onChange={(value) => setField('block', value)} />
+                <Field label="Country" value={form.country || ''} onChange={(value) => setField('country', value)} />
+                <Field label="Address Line 1" value={form.address1 || ''} onChange={(value) => setField('address1', value)} className="sm:col-span-2" />
+                <Field label="Address Line 2" value={form.address2 || ''} onChange={(value) => setField('address2', value)} className="sm:col-span-2" />
+                <Field label="City" value={form.city || ''} onChange={(value) => setField('city', value)} />
+                <Field label="State" value={form.state || ''} onChange={(value) => setField('state', value)} />
+                <Field label="Postcode" value={form.postcode || ''} onChange={(value) => setField('postcode', value)} />
+                <Field label="Contact Person" value={form.contact_name || ''} onChange={(value) => setField('contact_name', value)} />
+                <Field label="Contact Designation" value={form.contact_designation || ''} onChange={(value) => setField('contact_designation', value)} />
+                <Field label="Contact Email" type="email" value={form.contact_email || ''} onChange={(value) => setField('contact_email', value)} />
+                <Field label="Contact Mobile" value={form.contact_mobile || ''} onChange={(value) => setField('contact_mobile', value)} />
+                <Field label="Office Phone" value={form.office_phone || ''} onChange={(value) => setField('office_phone', value)} />
+                <Field label="Fax" value={form.fax || ''} onChange={(value) => setField('fax', value)} />
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">Cancel</button>
+            {activeSection > 0 && (
+              <button type="button" onClick={() => setActiveSection((section) => section - 1)} className="inline-flex items-center gap-1 px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                <ChevronLeft className="w-3.5 h-3.5" /> Back
+              </button>
+            )}
+            {activeSection < sections.length - 1 ? (
+              <button type="button" onClick={() => setActiveSection((section) => section + 1)} className="inline-flex items-center gap-1 px-4 py-2 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg font-semibold">
+                Next <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            ) : (
+              <button type="submit" className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-sm">
+                {isEditing ? 'Save Changes' : 'Create Master Company'}
+              </button>
+            )}
+          </div>
+        </form>
+
+        {false && <form onSubmit={handleSubmit} className="mt-4 space-y-4 text-xs">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <label className="block font-semibold text-slate-700 mb-1">Company Legal Name *</label>
@@ -504,10 +554,9 @@ function CompanyEditModal({
                 onChange={(e) => setForm({ ...form, company_type: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 bg-white"
               >
-                <option value="Forwarder">Forwarder (Uses Forwarding Agent ID)</option>
-                <option value="Haulage">Haulage (Uses HAULIERID)</option>
-                <option value="Transporter">Transporter (Uses Forwarding Agent ID)</option>
-                <option value="Forwarding Agent">Forwarding Agent</option>
+                <option value="FORWARDER">FORWARDER (Uses FORWARDING_AGENT_ID)</option>
+                <option value="HAULAGE">HAULAGE (Uses HAULIERID)</option>
+                <option value="TRANSPORT">TRANSPORT (Uses FORWARDING_AGENT_ID)</option>
               </select>
             </div>
 
@@ -622,8 +671,57 @@ function CompanyEditModal({
               {isEditing ? 'Save Changes' : 'Create Master Company'}
             </button>
           </div>
-        </form>
+        </form>}
       </div>
     </div>
+  );
+}
+
+type CompanyFormState = Omit<Company, 'created_at' | 'updated_at'>;
+
+function Field({
+  label,
+  value,
+  onChange,
+  className = '',
+  placeholder,
+  type = 'text',
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  className?: string;
+  placeholder?: string;
+  type?: string;
+}) {
+  return (
+    <label className={`block ${className}`}>
+      <span className="block font-semibold text-slate-700 mb-1">{label}</span>
+      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:outline-none" />
+    </label>
+  );
+}
+
+function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<string | { value: string; label: string }>;
+}) {
+  return (
+    <label className="block">
+      <span className="block font-semibold text-slate-700 mb-1">{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        {options.map((option) => {
+          const normalized = typeof option === 'string' ? { value: option, label: option } : option;
+          return <option key={normalized.value} value={normalized.value}>{normalized.label}</option>;
+        })}
+      </select>
+    </label>
   );
 }

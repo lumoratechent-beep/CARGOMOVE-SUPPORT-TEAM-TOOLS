@@ -1,4 +1,4 @@
-export type PortLocation = 'PORT_KLANG' | 'JOHOR';
+export type PortLocation = 'PORT_KLANG' | 'JOHOR' | 'OTHER';
 
 export type RegistrationType = 'COMPANY' | 'DRIVER' | 'TRAILER' | 'VEHICLE';
 

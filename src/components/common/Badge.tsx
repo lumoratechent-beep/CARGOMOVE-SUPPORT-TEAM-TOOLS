@@ -78,6 +78,13 @@ export function PortBadge({ location }: { location: string }) {
       </span>
     );
   }
+  if (location === 'OTHER') {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+        Other Port
+      </span>
+    );
+  }
   return (
     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
       Johor

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { notifySuccess } from '../common/notifications';
 import {
   getHaulierGuideline,
   saveHaulierGuideline,
@@ -11,7 +12,6 @@ import {
   RotateCcw,
   Plus,
   Trash2,
-  CheckCircle2,
   AlertTriangle,
   Eye,
   ExternalLink,
@@ -29,7 +29,6 @@ interface GuidelineManagerProps {
 
 export function GuidelineManager({ onPreviewCustomerView }: GuidelineManagerProps) {
   const [guideline, setGuideline] = useState<HaulierGuideline>(getHaulierGuideline());
-  const [savedSuccess, setSavedSuccess] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => {
@@ -136,20 +135,14 @@ export function GuidelineManager({ onPreviewCustomerView }: GuidelineManagerProp
   const handleSave = () => {
     const updated = saveHaulierGuideline(guideline);
     setGuideline(updated);
-    setSavedSuccess(true);
-    setTimeout(() => {
-      setSavedSuccess(false);
-    }, 3500);
+    notifySuccess('Haulier guidelines published successfully.');
   };
 
   const handleResetToDefault = () => {
     const def = resetHaulierGuideline();
     setGuideline(def);
     setShowResetConfirm(false);
-    setSavedSuccess(true);
-    setTimeout(() => {
-      setSavedSuccess(false);
-    }, 3500);
+    notifySuccess('Haulier guidelines reset successfully.');
   };
 
   return (
@@ -199,13 +192,6 @@ export function GuidelineManager({ onPreviewCustomerView }: GuidelineManagerProp
           </button>
         </div>
       </div>
-
-      {savedSuccess && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-xs">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-          Haulier Guidelines published successfully! Customer portal now displays the updated policies.
-        </div>
-      )}
 
       {/* 1. Main Titles & Notice */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">

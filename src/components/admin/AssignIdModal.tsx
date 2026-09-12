@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Company } from '../../types';
 import { getCompanyExternalId, normalizeCompanyCategory } from '../../services/companyHelper';
 import { updateCompanyId } from '../../services/storage';
-import { X, Key, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { X, Key } from 'lucide-react';
+import { notifySuccess, notifyWarning } from '../common/notifications';
 
 interface AssignIdModalProps {
   company: Company | null;
@@ -18,14 +19,12 @@ export function AssignIdModal({
   onSuccess,
 }: AssignIdModalProps) {
   const [idValue, setIdValue] = useState('');
-  const [error, setError] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
     if (company) {
       const idInfo = getCompanyExternalId(company);
       setIdValue(idInfo.active_id_value || '');
-      setError('');
       setSavedSuccess(false);
     }
   }, [company]);
@@ -39,12 +38,14 @@ export function AssignIdModal({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!idValue.trim()) {
-      setError(`Please enter a valid ${targetIdType}.`);
+      const message = `Please enter a valid ${targetIdType}.`;
+      notifyWarning(message);
       return;
     }
 
     updateCompanyId(company.id, targetIdType, idValue.trim());
     setSavedSuccess(true);
+    notifySuccess('Master ID assigned successfully.');
 
     setTimeout(() => {
       onSuccess?.();
@@ -104,25 +105,16 @@ export function AssignIdModal({
               value={idValue}
               onChange={(e) => {
                 setIdValue(e.target.value);
-                setError('');
               }}
               placeholder={targetIdType === 'HAULIERID' ? 'XYZ-HAUL-456' : '64abc123xyz'}
               className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
               autoFocus
             />
-            {error && <p className="text-xs text-rose-600 mt-1">{error}</p>}
           </div>
 
           <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 text-[11px] text-blue-800 leading-relaxed">
             <strong>Automatic Propagation:</strong> Assigning this ID once saves it permanently to the Company Master and immediately updates all existing and future Driver, Trailer, Vehicle, and Company Excel exports!
           </div>
-
-          {savedSuccess && (
-            <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              ID assigned successfully! Updating records...
-            </div>
-          )}
 
           <div className="flex items-center justify-end gap-2 pt-3">
             <button

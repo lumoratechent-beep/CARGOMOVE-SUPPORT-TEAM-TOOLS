@@ -7,8 +7,8 @@ import {
 } from '../types';
 import {
   getCompanyExternalId,
+  getExportCompanyType,
   generateExcelFilename,
-  normalizeCompanyCategory,
 } from './companyHelper';
 import {
   getCompanyById,
@@ -148,7 +148,7 @@ export function validateSubmissionsForExport(
 
 /**
  * Resolves configured backend port or depot ID from the Admin configuration.
- * For PORT_KLANG, auto-assigns WESTPORT and NORTHPORT comma-separated (e.g. FEFWEBFWEBFEY4,WFWEWEGEGR5).
+ * For PORT_KLANG, auto-assigns WESTPORT and NORTHPORT comma-separated.
  */
 export function resolveSubmissionPorts(
   sub: RegistrationSubmission,
@@ -157,8 +157,8 @@ export function resolveSubmissionPorts(
   if (sub.port_location === 'PORT_KLANG') {
     const wp = ports.find((p) => p.code === 'WESTPORT' || p.id === 'pk-westport');
     const np = ports.find((p) => p.code === 'NORTHPORT' || p.id === 'pk-northport');
-    const wpId = wp?.backend_port_id || 'FEFWEBFWEBFEY4';
-    const npId = np?.backend_port_id || 'WFWEWEGEGR5';
+    const wpId = wp?.backend_port_id || '5ad78eeb458efa4c5a1fc007';
+    const npId = np?.backend_port_id || '5adc9dd77753d26fb07d6f26';
     return `${wpId},${npId}`;
   }
 
@@ -232,7 +232,7 @@ export function buildExcelRowData(
           FORWARDING_AGENT_ID: idRes.forwarding_agent_id || '',
           NAME: comp?.name || sub.company_name || compData.name || '',
           SHORTNAME: comp?.short_name || compData.short_name || '',
-          TYPE: compType,
+          TYPE: getExportCompanyType(compType),
           REGISTRATION: comp?.registration_number_old || comp?.registration_number || compData.registration_number_old || sub.company_reg_no || '',
           REGISTRATION_NEW: comp?.registration_number_new || compData.registration_number_new || '',
           PORTS: portVal,
@@ -273,7 +273,7 @@ export function buildExcelRowData(
             DRIVINGLICENSE: driver?.driving_license || '',
             HAULIERID: idRes.haulier_id || '',
             FORWARDING_AGENT_ID: idRes.forwarding_agent_id || '',
-            COMPANYTYPE: normalizeCompanyCategory(compType) === 'HAULIER' ? 'HAULIER' : 'FORWARDING',
+            COMPANYTYPE: getExportCompanyType(compType),
             MOBILENO: driver?.mobile_no || '',
             NAME: driver?.name || '',
             PORTS: portVal,
@@ -301,7 +301,7 @@ export function buildExcelRowData(
             REGISTRATION: trailer?.registration_number || '',
             HAULIERID: idRes.haulier_id || '',
             FORWARDING_AGENT_ID: idRes.forwarding_agent_id || '',
-            COMPANYTYPE: normalizeCompanyCategory(compType) === 'HAULIER' ? 'HAULIER' : 'FORWARDING',
+            COMPANYTYPE: getExportCompanyType(compType),
             WEIGHT: trailer?.weight || '',
             TYPE: trailer?.trailer_type || '',
             BDM_WEIGHT: trailer?.bdm_weight || '',
@@ -330,7 +330,7 @@ export function buildExcelRowData(
             REGISTRATION: vehicle?.registration_number || '',
             HAULIERID: idRes.haulier_id || '',
             FORWARDING_AGENT_ID: idRes.forwarding_agent_id || '',
-            COMPANYTYPE: normalizeCompanyCategory(compType) === 'HAULIER' ? 'HAULIER' : 'FORWARDING',
+            COMPANYTYPE: getExportCompanyType(compType),
             WEIGHT: vehicle?.weight || '',
             BGK_WEIGHT: vehicle?.bgk_weight || '',
             HEAD: vehicle?.head || '',

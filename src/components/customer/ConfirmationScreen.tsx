@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   PortLocation,
   RegistrationType,
@@ -52,6 +52,7 @@ export function ReviewScreen({
   const [agreed, setAgreed] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const autoPorts = getAutoAssignedPorts(location);
+  const touchStartX = useRef<number | null>(null);
 
   const handleSubmit = async () => {
     if (!agreed) return;
@@ -70,8 +71,23 @@ export function ReviewScreen({
     }, 350);
   };
 
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    touchStartX.current = event.changedTouches[0]?.clientX ?? null;
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartX.current === null) return;
+    const swipeDistance = event.changedTouches[0].clientX - touchStartX.current;
+    touchStartX.current = null;
+    if (swipeDistance > 50) onBack();
+  };
+
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
+    <div
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      className="max-w-3xl mx-auto min-h-[calc(100vh-270px)] flex flex-col gap-3 touch-pan-y page-slide-forward"
+    >
       <div className="text-center">
         <h2 className="text-base font-bold text-slate-900 tracking-tight">Review & Confirm Submission</h2>
         <p className="text-slate-500 text-xs mt-0.5">
@@ -79,7 +95,7 @@ export function ReviewScreen({
         </p>
       </div>
 
-      <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-xs space-y-3">
+      <div className="flex-1 bg-white rounded-lg border border-slate-200 p-4 shadow-xs space-y-3">
         {/* Header Summary */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div>
@@ -145,16 +161,23 @@ export function ReviewScreen({
               <span className="text-slate-800 text-[11px]">
                 {formData.company.block ? `${formData.company.block}, ` : ''}
                 {formData.company.address1}, {formData.company.address2 ? `${formData.company.address2}, ` : ''}
-                {formData.company.city}, {formData.company.state} {formData.company.postcode}
+                {formData.company.city}, {formData.company.state} {formData.company.postcode}, {formData.company.country}
               </span>
             </div>
             <div>
               <span className="text-[10px] text-slate-400 block font-semibold">Contact Person</span>
-              <span className="font-semibold text-slate-900">{formData.company.contact_name}</span>
+              <span className="font-semibold text-slate-900">
+                {formData.company.contact_name}
+                {formData.company.contact_designation ? ` (${formData.company.contact_designation})` : ''}
+              </span>
             </div>
             <div>
-              <span className="text-[10px] text-slate-400 block font-semibold">Contact Email & Mobile</span>
-              <span className="text-slate-900">{formData.company.contact_email} &bull; {formData.company.contact_mobile}</span>
+              <span className="text-[10px] text-slate-400 block font-semibold">PIC Contact Details</span>
+              <span className="text-slate-900">
+                {formData.company.contact_email} &bull; {formData.company.contact_mobile}
+                {formData.company.office_phone ? ` &bull; Office: ${formData.company.office_phone}` : ''}
+                {formData.company.fax ? ` &bull; Fax: ${formData.company.fax}` : ''}
+              </span>
             </div>
           </div>
         )}
@@ -303,11 +326,11 @@ export function ReviewScreen({
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-2">
+      <div className="flex items-center justify-between pt-1 mt-auto">
         <button
           type="button"
           onClick={onBack}
-          className="px-3.5 py-1.5 rounded text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+          className="inline-flex h-9 items-center gap-1.5 px-3.5 py-0 rounded text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
         >
           &larr; Back to Edit
         </button>
@@ -316,7 +339,7 @@ export function ReviewScreen({
           type="button"
           disabled={!agreed || submitting}
           onClick={handleSubmit}
-          className="inline-flex items-center px-5 py-2 rounded text-xs font-bold text-white bg-[#ea7a24] hover:bg-[#d96c1a] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-xs"
+          className="inline-flex h-9 items-center px-5 py-0 rounded text-xs font-bold text-white bg-[#ea7a24] hover:bg-[#d96c1a] disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-xs"
         >
           {submitting ? (
             <>

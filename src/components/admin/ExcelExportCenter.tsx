@@ -13,11 +13,11 @@ import {
   Layers,
   ArrowRight,
 } from 'lucide-react';
+import { notifyError, notifySuccess, notifyWarning, summarizeError } from '../common/notifications';
 
 export function ExcelExportCenter() {
   const [selectedType, setSelectedType] = useState<RegistrationType>('COMPANY');
   const [filterCompanyId, setFilterCompanyId] = useState<string>('ALL');
-  const [exportMessage, setExportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const submissions = getSubmissions();
   const companies = getCompanies();
@@ -41,20 +41,17 @@ export function ExcelExportCenter() {
   const currentTemplate = EXCEL_TEMPLATES[selectedType];
 
   const handleExport = () => {
-    setExportMessage(null);
     if (filteredSubmissions.length === 0) {
-      setExportMessage({ type: 'error', text: 'No submissions available to export in this category.' });
+      const message = 'No submissions available to export in this category.';
+      notifyWarning(message);
       return;
     }
 
     const res = exportSubmissionsToExcel(filteredSubmissions);
     if (!res.success) {
-      setExportMessage({ type: 'error', text: res.error || 'Export failed.' });
+      notifyError(summarizeError(res.error || 'Export failed.'));
     } else {
-      setExportMessage({
-        type: 'success',
-        text: `Export Complete! ${res.count} records generated into ${res.filename}`,
-      });
+      notifySuccess(`Export complete: ${res.count} record(s) generated.`);
     }
   };
 
@@ -71,31 +68,6 @@ export function ExcelExportCenter() {
         </p>
       </div>
 
-      {exportMessage && (
-        <div
-          className={`p-3.5 rounded-xl text-xs flex items-center justify-between ${
-            exportMessage.type === 'success'
-              ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
-              : 'bg-rose-50 border border-rose-200 text-rose-800'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            {exportMessage.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            ) : (
-              <AlertTriangle className="w-4 h-4 text-rose-600" />
-            )}
-            <span>{exportMessage.text}</span>
-          </div>
-          <button
-            onClick={() => setExportMessage(null)}
-            className="text-xs underline font-semibold ml-4"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
       {/* Select Category Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {(['COMPANY', 'DRIVER', 'TRAILER', 'VEHICLE'] as RegistrationType[]).map((type) => {
@@ -108,7 +80,6 @@ export function ExcelExportCenter() {
               type="button"
               onClick={() => {
                 setSelectedType(type);
-                setExportMessage(null);
               }}
               className={`p-4 rounded-xl text-left border transition-all ${
                 isSelected

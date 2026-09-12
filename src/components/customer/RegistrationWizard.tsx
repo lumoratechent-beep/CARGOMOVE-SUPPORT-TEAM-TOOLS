@@ -20,7 +20,8 @@ import { VehicleForm } from './forms/VehicleForm';
 import { ReviewScreen, SuccessScreen } from './ConfirmationScreen';
 import { StatusTrackerModal } from './StatusTrackerModal';
 import { Logo } from '../common/Logo';
-import { Anchor, Check, ArrowRight, Shield, Search } from 'lucide-react';
+import { Check, Search } from 'lucide-react';
+import { HaulierGuidelinePage } from './HaulierGuidelinePage';
 
 interface RegistrationWizardProps {
   onSwitchToAdmin: () => void;
@@ -28,7 +29,7 @@ interface RegistrationWizardProps {
 
 export function RegistrationWizard({ onSwitchToAdmin }: RegistrationWizardProps) {
   const [currentStep, setCurrentStep] = useState<number>(1);
-  const [selectedLocation, setSelectedLocation] = useState<PortLocation | null>('JOHOR');
+  const [selectedLocation, setSelectedLocation] = useState<PortLocation | null>(null);
   const [selectedType, setSelectedType] = useState<RegistrationType | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
 
@@ -40,6 +41,7 @@ export function RegistrationWizard({ onSwitchToAdmin }: RegistrationWizardProps)
 
   const [submittedRefNo, setSubmittedRefNo] = useState<string>('');
   const [showTrackerModal, setShowTrackerModal] = useState<boolean>(false);
+  const [showGuideline, setShowGuideline] = useState<boolean>(false);
 
   const ports = getPorts();
   const currentPort = ports.find((p) => p.location === selectedLocation) || ports[0];
@@ -179,7 +181,7 @@ export function RegistrationWizard({ onSwitchToAdmin }: RegistrationWizardProps)
 
   const handleReset = () => {
     setCurrentStep(1);
-    setSelectedLocation('JOHOR');
+    setSelectedLocation(null);
     setSelectedType(null);
     setSelectedCompany(null);
     setCompanyFormData(undefined);
@@ -190,14 +192,18 @@ export function RegistrationWizard({ onSwitchToAdmin }: RegistrationWizardProps)
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col">
+      {showGuideline ? (
+        <HaulierGuidelinePage onBack={() => setShowGuideline(false)} />
+      ) : (
+        <>
       {/* Top Navbar */}
-      <header className="bg-[#0b1220] text-white border-b border-slate-800 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-12 flex items-center justify-between">
+      <header className="bg-[#0b1930] text-white border-b border-slate-800 sticky top-0 z-40">
+        <div className="max-w-[1320px] mx-auto px-4 sm:px-8 lg:px-[44px] h-[54px] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Logo size="sm" />
-            <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-slate-700/70">
-              <span className="text-white text-xs font-semibold tracking-wide">CUSTOMER REGISTRATION PORTAL</span>
+            <Logo size="md" light />
+            <div className="hidden sm:flex items-center gap-4 pl-5 border-l border-slate-600/70 h-6">
+              <span className="text-white text-sm sm:text-base font-semibold">Customer Registration</span>
             </div>
           </div>
 
@@ -205,19 +211,17 @@ export function RegistrationWizard({ onSwitchToAdmin }: RegistrationWizardProps)
             <button
               type="button"
               onClick={() => setShowTrackerModal(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors"
+              className="inline-flex items-center justify-center gap-2 h-[30px] px-3 text-xs font-semibold rounded-md bg-transparent hover:bg-white/10 text-slate-100 border border-sky-500/80 transition-colors"
             >
-              <Search className="w-3 h-3 text-slate-400" />
-              Track Registration
+              <Search className="w-3.5 h-3.5 text-[#0095e8]" />
+              Track registration
             </button>
-
             <button
               type="button"
               onClick={onSwitchToAdmin}
-              className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded bg-[#ea7a24] hover:bg-[#d96c1a] text-white transition-colors shadow-xs"
+              className="inline-flex items-center justify-center h-[30px] px-4 text-xs font-semibold rounded-md bg-[#0095e8] hover:bg-[#0078c8] text-white border border-[#0095e8] transition-colors"
             >
-              <Shield className="w-3 h-3" />
-              Admin Portal
+              Login
             </button>
           </div>
         </div>
@@ -225,43 +229,30 @@ export function RegistrationWizard({ onSwitchToAdmin }: RegistrationWizardProps)
 
       {/* Progress Bar (visible during steps 1-5) */}
       {currentStep <= 5 && (
-        <div className="bg-white border-b border-slate-200 py-2.5 px-4 shadow-2xs">
-          <div className="max-w-2xl mx-auto flex items-center justify-between text-xs font-semibold">
-            {(selectedLocation === 'PORT_KLANG'
-              ? [
-                  { num: 1, label: 'Port' },
-                  { num: 4, label: 'Company Details' },
-                  { num: 5, label: 'Review' },
-                ]
-              : [
-                  { num: 1, label: 'Port' },
-                  { num: 2, label: 'Category' },
-                  { num: 3, label: selectedType === 'COMPANY' ? 'Skip' : 'Company' },
-                  { num: 4, label: 'Details' },
-                  { num: 5, label: 'Review' },
-                ]
-            ).map((s, idx) => {
-              const isPast = currentStep > s.num;
-              const isCurrent = currentStep === s.num;
-              const displayNum = idx + 1;
+        <div className="h-[68px] flex items-center bg-white border-b border-[#e8eef5] px-4">
+          <div className="max-w-[640px] mx-auto w-full flex items-center justify-between text-xs font-semibold">
+            {[
+              { num: 1, label: 'Port' },
+              { num: 2, label: 'Registration Type' },
+              { num: 3, label: 'Company Details' },
+              { num: 4, label: 'Review' },
+            ].map((step, idx) => {
+              const visualStep = currentStep === 1 ? 1 : currentStep <= 3 ? 2 : currentStep === 4 ? 3 : 4;
+              const isPast = visualStep > step.num;
+              const isCurrent = visualStep === step.num;
 
               return (
-                <div key={s.num} className="flex items-center gap-1.5">
-                  <div
-                    className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[11px] transition-colors ${
-                      isPast
-                        ? 'bg-emerald-600 text-white'
-                        : isCurrent
-                        ? 'bg-[#0090e7] text-white ring-2 ring-sky-100'
-                        : 'bg-slate-100 text-slate-500'
-                    }`}
-                  >
-                    {isPast ? <Check className="w-3 h-3" /> : displayNum}
+                <React.Fragment key={step.num}>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[11px] transition-colors ${
+                      isPast ? 'bg-emerald-600 text-white' : isCurrent ? 'bg-[#0095e8] text-white ring-4 ring-sky-100' : 'bg-[#eef3f8] text-[#5b6b84]'
+                    }`}>
+                      {isPast ? <Check className="w-3.5 h-3.5" /> : step.num}
+                    </div>
+                    <span className={`hidden sm:inline whitespace-nowrap ${isCurrent ? 'text-[#102a56] font-bold' : 'text-[#5b6b84]'}`}>{step.label}</span>
                   </div>
-                  <span className={`text-[11px] hidden sm:inline ${isCurrent ? 'text-slate-900 font-bold' : 'text-slate-500'}`}>
-                    {s.label}
-                  </span>
-                </div>
+                  {idx < 3 && <div className={`hidden sm:block w-14 lg:w-[58px] h-px mx-2 ${isPast ? 'bg-emerald-500' : 'bg-[#d9e3ef]'}`} />}
+                </React.Fragment>
               );
             })}
           </div>
@@ -269,7 +260,7 @@ export function RegistrationWizard({ onSwitchToAdmin }: RegistrationWizardProps)
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-[1080px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-7">
         {/* Step 1: Port Selection */}
         {currentStep === 1 && (
           <PortSelection
@@ -278,6 +269,7 @@ export function RegistrationWizard({ onSwitchToAdmin }: RegistrationWizardProps)
             ports={ports}
             onNext={() => setCurrentStep(2)}
             onSelectPortKlangDirect={handleAutoOpenPortKlang}
+            onOpenGuideline={() => setShowGuideline(true)}
           />
         )}
 
@@ -388,16 +380,15 @@ export function RegistrationWizard({ onSwitchToAdmin }: RegistrationWizardProps)
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
-          <div>
-            &copy; 2026 Port Logistics Authority &bull; Pasir Gudang, Port Klang Maritime Corridors.
-          </div>
-          <div className="flex items-center gap-4">
-            <span>Automated Excel EDI Engine</span>
-            <span>&bull;</span>
-            <span>Support: support@portgate.gov.my</span>
-          </div>
+      <footer className="h-12 shrink-0 border-t border-slate-200 bg-white">
+        <div className="h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-[11px] leading-4 text-slate-500">
+          <span className="font-semibold text-slate-700">Contact for help</span>
+          <span className="hidden sm:inline text-slate-300">|</span>
+          <span>+60 3277 12765</span>
+          <span className="hidden sm:inline text-slate-300">|</span>
+          <span>support@cargomove.com.my</span>
+          <span className="hidden sm:inline text-slate-300">|</span>
+          <span className="font-semibold text-emerald-700">WHATSAPP: +6018 266 0085 (FASTER RESPONSE)</span>
         </div>
       </footer>
 
@@ -407,6 +398,8 @@ export function RegistrationWizard({ onSwitchToAdmin }: RegistrationWizardProps)
         onClose={() => setShowTrackerModal(false)}
         initialRef={submittedRefNo}
       />
+        </>
+      )}
     </div>
   );
 }
