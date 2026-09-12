@@ -1,0 +1,6 @@
+{
+  "name": "Port Logistics Registration & ID Master",
+  "description": "Web registration system for Port Klang and Johor port operations, replacing manual Excel workflows for Company, Driver, Trailer, and Vehicle onboarding with automated ID assignment and exact Excel backend exports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,402 @@
+import React, { useState } from 'react';
+import { RegistrationSubmission, RegistrationType, SubmissionStatus, Company } from '../../types';
+import {
+  getSubmissions,
+  getCompanyById,
+  deleteSubmission,
+} from '../../services/storage';
+import { getCompanyExternalId } from '../../services/companyHelper';
+import { exportSubmissionsToExcel } from '../../services/excelExport';
+import { StatusBadge, TypeBadge, PortBadge } from '../common/Badge';
+import { SubmissionDetailModal } from './SubmissionDetailModal';
+import { AssignIdModal } from './AssignIdModal';
+import {
+  Search,
+  Filter,
+  Download,
+  Eye,
+  AlertTriangle,
+  CheckCircle,
+  FileSpreadsheet,
+  Trash2,
+  Key,
+} from 'lucide-react';
+
+export function SubmissionsList() {
+  const [submissions, setSubmissions] = useState<RegistrationSubmission[]>(getSubmissions());
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [portFilter, setPortFilter] = useState<string>('ALL');
+  const [missingIdOnly, setMissingIdOnly] = useState(false);
+
+  // Modals
+  const [activeSubmission, setActiveSubmission] = useState<RegistrationSubmission | null>(null);
+  const [assignIdCompany, setAssignIdCompany] = useState<Company | null>(null);
+
+  // Feedback banner
+  const [exportMessage, setExportMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const refreshList = () => {
+    setSubmissions(getSubmissions());
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredSubmissions.map((s) => s.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter((item) => item !== id));
+    } else {
+      setSelectedIds([...selectedIds, id]);
+    }
+  };
+
+  const filteredSubmissions = submissions.filter((sub) => {
+    const term = searchTerm.toLowerCase();
+    const matchesSearch =
+      !term ||
+      sub.reference_no.toLowerCase().includes(term) ||
+      sub.company_name.toLowerCase().includes(term) ||
+      sub.company_reg_no.toLowerCase().includes(term);
+
+    const matchesType = typeFilter === 'ALL' || sub.registration_type === typeFilter;
+    const matchesStatus = statusFilter === 'ALL' || sub.status === statusFilter;
+    const matchesPort = portFilter === 'ALL' || sub.port_location === portFilter;
+
+    // Check if parent company has required ID
+    const company = sub.company_id ? getCompanyById(sub.company_id) : undefined;
+    const idInfo = getCompanyExternalId(company || { company_type: sub.company_type });
+    const matchesMissingId = !missingIdOnly || !idInfo.has_required_id;
+
+    return matchesSearch && matchesType && matchesStatus && matchesPort && matchesMissingId;
+  });
+
+  const handleBulkExport = () => {
+    setExportMessage(null);
+    const selectedSubs = submissions.filter((s) => selectedIds.includes(s.id));
+    if (selectedSubs.length === 0) {
+      setExportMessage({ type: 'error', text: 'Please select at least one submission to export.' });
+      return;
+    }
+
+    const res = exportSubmissionsToExcel(selectedSubs);
+    if (!res.success) {
+      setExportMessage({ type: 'error', text: res.error || 'Export failed.' });
+    } else {
+      setExportMessage({
+        type: 'success',
+        text: `Successfully exported ${res.count} record(s) to ${res.filename}`,
+      });
+      refreshList();
+      setSelectedIds([]);
+    }
+  };
+
+  const handleOpenAssignIdForSub = (sub: RegistrationSubmission) => {
+    if (sub.company_id) {
+      const comp = getCompanyById(sub.company_id);
+      if (comp) {
+        setAssignIdCompany(comp);
+        return;
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Registration Submissions</h2>
+          <p className="text-xs text-slate-500 mt-1">
+            Review customer applications, verify company ID linkage, and generate official backend Excel exports.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleBulkExport}
+            disabled={selectedIds.length === 0}
+            className="inline-flex items-center px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition-colors shadow-sm"
+          >
+            <Download className="w-4 h-4 mr-1.5" />
+            Export Selected ({selectedIds.length})
+          </button>
+        </div>
+      </div>
+
+      {exportMessage && (
+        <div
+          className={`p-3.5 rounded-xl text-xs flex items-center justify-between ${
+            exportMessage.type === 'success'
+              ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border border-rose-200 text-rose-800'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {exportMessage.type === 'success' ? (
+              <CheckCircle className="w-4 h-4 text-emerald-600" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-rose-600" />
+            )}
+            <span>{exportMessage.text}</span>
+          </div>
+          <button
+            onClick={() => setExportMessage(null)}
+            className="text-xs underline font-semibold ml-4"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Filters & Search */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center gap-3">
+        <div className="relative flex-1 w-full">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by Reference (REG-...) or Company..."
+            className="w-full px-3.5 py-2 pl-9 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          {/* Type Filter */}
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="ALL">All Types</option>
+            <option value="COMPANY">Company</option>
+            <option value="DRIVER">Driver</option>
+            <option value="TRAILER">Trailer</option>
+            <option value="VEHICLE">Vehicle</option>
+          </select>
+
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="PENDING">Pending</option>
+            <option value="REVIEWED">Reviewed</option>
+            <option value="READY_TO_EXPORT">Ready to Export</option>
+            <option value="EXPORTED">Exported</option>
+            <option value="REJECTED">Rejected</option>
+          </select>
+
+          {/* Port Filter */}
+          <select
+            value={portFilter}
+            onChange={(e) => setPortFilter(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="ALL">All Facilities</option>
+            <option value="PORT_KLANG">Port Klang</option>
+            <option value="JOHOR">Johor</option>
+          </select>
+
+          {/* Missing ID Filter */}
+          <button
+            type="button"
+            onClick={() => setMissingIdOnly(!missingIdOnly)}
+            className={`px-3 py-2 rounded-lg text-xs font-bold border transition-colors whitespace-nowrap ${
+              missingIdOnly
+                ? 'bg-amber-100 text-amber-800 border-amber-300'
+                : 'bg-slate-50 text-slate-600 border-slate-300 hover:bg-slate-100'
+            }`}
+          >
+            ⚠ Missing ID Only
+          </button>
+        </div>
+      </div>
+
+      {/* Submissions Table */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider">
+                <th className="py-3 px-3 w-8 text-center">
+                  <input
+                    type="checkbox"
+                    checked={
+                      filteredSubmissions.length > 0 &&
+                      selectedIds.length === filteredSubmissions.length
+                    }
+                    onChange={handleSelectAll}
+                    className="rounded text-blue-600 focus:ring-blue-500"
+                  />
+                </th>
+                <th className="py-3 px-4">Reference No</th>
+                <th className="py-3 px-3">Type</th>
+                <th className="py-3 px-4">Company Name & Reg</th>
+                <th className="py-3 px-3">Facility</th>
+                <th className="py-3 px-3">Backend ID Linkage</th>
+                <th className="py-3 px-3">Status</th>
+                <th className="py-3 px-3">Submitted</th>
+                <th className="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredSubmissions.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-8 text-center text-slate-500">
+                    No submissions found matching criteria.
+                  </td>
+                </tr>
+              ) : (
+                filteredSubmissions.map((sub) => {
+                  const company = sub.company_id ? getCompanyById(sub.company_id) : undefined;
+                  const idInfo = getCompanyExternalId(company || { company_type: sub.company_type });
+                  const isSelected = selectedIds.includes(sub.id);
+
+                  return (
+                    <tr
+                      key={sub.id}
+                      className={`hover:bg-slate-50/70 transition-colors ${
+                        isSelected ? 'bg-blue-50/40' : ''
+                      }`}
+                    >
+                      <td className="py-3 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(sub.id)}
+                          className="rounded text-blue-600 focus:ring-blue-500"
+                        />
+                      </td>
+
+                      <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                        {sub.reference_no}
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <div className="flex flex-col gap-1 items-start">
+                          <TypeBadge type={sub.registration_type} />
+                          {sub.registration_type === 'DRIVER' && (sub.data.drivers?.length || 0) > 1 && (
+                            <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200">
+                              {sub.data.drivers?.length} Drivers
+                            </span>
+                          )}
+                          {sub.registration_type === 'TRAILER' && (sub.data.trailers?.length || 0) > 1 && (
+                            <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
+                              {sub.data.trailers?.length} Trailers
+                            </span>
+                          )}
+                          {sub.registration_type === 'VEHICLE' && (sub.data.vehicles?.length || 0) > 1 && (
+                            <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">
+                              {sub.data.vehicles?.length} Vehicles
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-4">
+                        <div className="font-bold text-slate-900">{sub.company_name}</div>
+                        <div className="font-mono text-[11px] text-slate-500">
+                          {sub.company_reg_no}
+                        </div>
+                      </td>
+
+                      <td className="py-2.5 px-3">
+                        <PortBadge location={sub.port_location} />
+                        <div
+                          className="font-mono text-[10px] text-slate-600 mt-1 truncate max-w-[130px] font-semibold"
+                          title={sub.port_location === 'PORT_KLANG' ? 'WESTPORT & NORTHPORT (FEFWEBFWEBFEY4,WFWEWEGEGR5)' : sub.port_id}
+                        >
+                          {sub.port_location === 'PORT_KLANG' ? 'FEFWEBFWEBFEY4,WFWEWEGEGR5' : (sub.port_id || 'PG-ICS')}
+                        </div>
+                      </td>
+
+                      {/* Backend ID Linkage Status */}
+                      <td className="py-3 px-3 font-mono">
+                        {idInfo.has_required_id ? (
+                          <div className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[11px]">
+                            <CheckCircle className="w-3 h-3 text-emerald-600" />
+                            <span>{idInfo.active_id_value}</span>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenAssignIdForSub(sub)}
+                            className="inline-flex items-center gap-1 text-amber-800 bg-amber-100 hover:bg-amber-200 px-2 py-0.5 rounded border border-amber-300 text-[10px] font-bold"
+                          >
+                            <AlertTriangle className="w-3 h-3 text-amber-700" />
+                            <span>ID Required</span>
+                          </button>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <StatusBadge status={sub.status} />
+                      </td>
+
+                      <td className="py-3 px-3 text-[11px] text-slate-500">
+                        {new Date(sub.submitted_at).toLocaleDateString()}
+                      </td>
+
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setActiveSubmission(sub)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            Review
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Submission Detail Modal */}
+      <SubmissionDetailModal
+        submission={activeSubmission}
+        isOpen={!!activeSubmission}
+        onClose={() => setActiveSubmission(null)}
+        onOpenAssignId={(compGuid) => {
+          const c = getCompanyById(compGuid);
+          if (c) setAssignIdCompany(c);
+        }}
+        onStatusChange={() => {
+          refreshList();
+          if (activeSubmission) {
+            const updated = getSubmissions().find((s) => s.id === activeSubmission.id);
+            setActiveSubmission(updated || null);
+          }
+        }}
+      />
+
+      {/* Assign ID Modal */}
+      <AssignIdModal
+        company={assignIdCompany}
+        isOpen={!!assignIdCompany}
+        onClose={() => setAssignIdCompany(null)}
+        onSuccess={() => {
+          refreshList();
+        }}
+      />
+    </div>
+  );
+}
